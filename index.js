@@ -8,7 +8,7 @@ app.use(cors());
 app.use(express.json());
 
 
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const uri = `mongodb+srv://${process.env.BD_USER}:${process.env.BD_PASS}@cluster0.ihxtrhm.mongodb.net/?retryWrites=true&w=majority`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -30,7 +30,7 @@ async function run() {
 
         app.post('/users', async (req, res) => {
             const user = req.body;
-            const query = { email: user.email,name:user.name,photo:user.photo }
+            const query = { email: user.email, name: user.name, photo: user.photo }
             const existingUser = await userCollection.findOne(query);
             if (existingUser) {
                 return res.send({ message: "user already exists", insertedId: null })
@@ -38,30 +38,50 @@ async function run() {
             const result = await userCollection.insertOne(user);
             res.send(result);
         })
+        app.get('/users', async (req, res) => {
+            const result = await userCollection.find().toArray();
+            res.send(result);
+        })
+
+        app.patch('/users/admin/:id', async (req, res) => {
+            const id = req.params.id;
+            console.log('Received id:', id);
+            const filter = { _id: new ObjectId(id) };
+            const updateDoc = {
+                $set: {
+                    role: 'admin'
+                }
+            }
+            
+            const result = await userCollection.updateOne(filter, updateDoc);
+            res.send(result);
+        })
+
+        app.delete('/users/:id',async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) }
+            const result = await userCollection.deleteOne(query);
+            res.send(result);
+          })
+
 
         app.post('/bookings', async (req, res) => {
             const bookingItem = req.body;
             const result = await bookingCollection.insertOne(bookingItem);
             res.send(result);
-          });
+        });
 
-          app.get('/bookings', async (req, res) => {
+        app.get('/bookings', async (req, res) => {
             const cursor = bookingCollection.find();
             const result = await cursor.toArray();
             res.send(result);
 
         })
 
-        app.get('/users', async (req, res) => {
-            const result = await userCollection.find().toArray();
-            res.send(result);
-        })
-
         app.get('/reviews', async (req, res) => {
             const result = await reviewsCollection.find().toArray();
             res.send(result);
         })
-
 
 
         // Send a ping to confirm a successful connection
